@@ -1,6 +1,6 @@
-# https://stackoverflow.com/questions/77657489/using-python-to-connect-to-sharepoint-via-app-sign-in-client-id-secret-tenan
+#!/usr/bin/env python3
 
-import geocoder
+from geopy.geocoders import Nominatim
 import sys
 import json
 import os
@@ -10,12 +10,19 @@ import requests_cache
 requests_cache.install_cache('geocoder', backend='sqlite', expire_after=31536000)
 import urllib3
 import pynetbox
+import time
 
 import os
 from functools import wraps
 from flask import Flask, request, jsonify
 
+# I think this is pretty much pointless because we're running inside docker
+# without an exposed port, but I've already implemented it so I'm leaving it.
 WEBHOOK_AUTH_KEY = os.environ["WEBHOOK_TOKEN"]
+
+# I need to rewrite this with a queue system to accept the lookup request,
+# then later execute the job and post back to netbox.  This way I can rate
+# limit the job requests so that we don't anger Nominatim
 
 nb = pynetbox.api(url=os.environ['NETBOX_URL'], token=os.environ['NETBOX_TOKEN'])
 nb.http_session.verify = False
@@ -24,20 +31,28 @@ urllib3.disable_warnings()
 def geolookup(data):
     try:
         site = nb.dcim.sites.get(id=data['id'])
+        print(site.latitude, site.longitude, site.time_zone)
         if not site.physical_address:
-          return {"message": f"not adding {site.name} because physical_address is blank."}, 200
+          return {"message": f"not changing {site.name} because physical_address is blank."}, 200
+        modified = False
         if not site.latitude or not site.longitude:
-            g = geocoder.bing(site.physical_address, key=os.environ.get('BING_GEOCODER_KEY'))
-            results = g.json
-            site.latitude = round(results['lat'],6)
-            site.longitude = round(results['lng'],6)
+            geolocator = Nominatim(user_agent="netbox_geolookup_webhook.py")
+            results = geolocator.geocode(site.physical_address)
+            site.latitude = round(results.latitude,6)
+            site.longitude = round(results.longitude,6)
+            modified = True
         if not site.time_zone:
             url = f"https://api.geotimezone.com/public/timezone?latitude={site.latitude}&longitude={site.longitude}"
             tz = requests.get(url)
             results = tz.json()
             site.time_zone = results['iana_timezone']
-        site.save()
-        return {"message": f"added lat/lng ({site.latitude}/{site.longitude}) ({site.time_zone}) for site {site.name}"}, 200
+            modified = True
+        if modified:
+            site.save()
+            time.sleep(10)
+            return {"message": f"added lat/lng ({site.latitude}/{site.longitude}) ({site.time_zone}) for site {site.name} ({site.id})"}, 200
+        else:
+            return {"message": f"{site.name} ({site.id}) already has the information needed."}
     except Exception as e:
         return {"message": str(e)}, 400
 
