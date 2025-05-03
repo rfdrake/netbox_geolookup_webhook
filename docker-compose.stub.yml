@@ -1,0 +1,7 @@
+# this isn't made to be run directly.  It should be run as part of your netbox bundle.  That way you don't need to export the PORT to anything outside of netbox.
+
+services:
+ geolookup-webhook:
+    build: ../geolookup_webhook/
+    env_file: ../geolookup_webhook/geolookup.env
+
