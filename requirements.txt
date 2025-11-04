@@ -1,6 +1,6 @@
 flask==3.0.2
 gunicorn==21.2.0
-geocoder==1.38.1
-pynetbox==7.3.3
+geopy
+pynetbox==7.5.0
 requests-cache==1.2.0
 urllib3==2.2.1

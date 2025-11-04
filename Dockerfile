@@ -1,6 +1,6 @@
-# docker built -t create-webhook-folder .
-# docker run -p 5000:5000 --env-file create_folder.env create-webhook-folder
-FROM python:3.11.2-slim
+# docker build -t netbox-geolookup-webhook .
+# docker run -p 5000:5000 --env-file geolookup.env netbox-geolookup-webhook
+FROM python:3.12-slim
 
 # Set the working directory within the container
 WORKDIR /app
@@ -15,4 +15,5 @@ COPY . /app/
 EXPOSE 5000
 
 # Define the command to run the Flask application using Gunicorn
-CMD ["gunicorn", "function:app", "-b", "0.0.0.0:5000", "-w", "4"]
+# Important:  -w 1 is REQUIRED so we don't send too many queries to nominatim
+CMD ["gunicorn", "function:app", "-b", "0.0.0.0:5000", "-w", "1"]
