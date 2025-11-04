@@ -1,6 +1,6 @@
 # docker build -t netbox-geolookup-webhook .
 # docker run -p 5000:5000 --env-file geolookup.env netbox-geolookup-webhook
-FROM python:3.12-slim
+FROM python:3-slim
 
 # Set the working directory within the container
 WORKDIR /app
