@@ -9,6 +9,10 @@ import os
 # run this if you wish, or you can create all of this yourself rather than
 # trusting a script you haven't audited.
 
+# This script isn't idempotent but it probably should be. Running it a second
+# time should just change the webhook_secret and new_token values then update
+# the existing objects.
+
 @click.command()
 @click.option("--netbox-url", envvar="NETBOX_URL", required=True)
 @click.option("--netbox-user", type=str)
