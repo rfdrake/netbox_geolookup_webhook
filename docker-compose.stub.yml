@@ -4,24 +4,4 @@ services:
  geolookup-webhook:
     build: ../geolookup_webhook/
     env_file: ../geolookup_webhook/geolookup.env
- geolookup-redis:
-   env_file: geolookup.env
-   image: docker.io/valkey/valkey:8.1-alpine
-   command:
-      - sh
-      - -c
-      - valkey-server --requirepass $$REDIS_PASSWORD
-   healthcheck:
-      test: '[ $$(valkey-cli --pass "$${REDIS_PASSWORD}" ping) = ''PONG'' ]'
-      start_period: 5s
-      timeout: 3s
-      interval: 1s
-      retries: 5
-   volumes:
-      - geolookup-redis-cache:/data
-
-volumes:
-   geolookup-redis-cache:
-      driver: local
-
 
