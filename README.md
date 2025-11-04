@@ -13,7 +13,8 @@ environment by running something like this:
 
 # Installation
 
-Copy the lines from the docker-compose.stub.yaml into your netbox project.
+Copy the lines from the docker-compose.stub.yaml into your netbox project's
+docker-compose.override.yml.
 
 or
 
@@ -24,11 +25,11 @@ include:
     - ../geolookup_webhook/docker-compose.stub.yml
 ```
 
-Once this is done you'll need to restart docker and then activate the webhook
-in netbox.
+# Setting up Netbox with the Webhook
 
 Under "Admin|Users"
-Add a user for "webhooks_api" if you wish
+Add a user for "webhooks_api" if you wish, you can pick another name that
+suits your purpose.
 
 Under "Admin|API Tokens"
 Create an API token under the webhooks_api user (or whichever user you prefer)
@@ -38,7 +39,7 @@ Under "Operations|Event Rules|Webhooks"
 
 Name: Geolookup Webhook
 Payload URL: http://geolookup-webhook:5000/webhook
-Secret: This should match your WEBHOOK_TOKEN in your geolookup.env file. You
+Secret: This should match your WEBHOOK_SECRET in your geolookup.env file. You
 can use "openssl rand -base64 32" to generate this.
 
 Under "Operations|Event Rules|Add"
@@ -49,16 +50,32 @@ Event Types: Object created, Object updated
 Action Type: Webhook
 Webhook: Geolookup Webhook
 
-# Note about WEBHOOK_USER
+# Running install.py instead of the above
 
-When you create the geolookup.env file you need to supply a NETBOX_TOKEN
-value. This is created inside netbox and attached to a user. In my case I made
-a special user called "webhooks_api" and gave it a token.
+If you have installed pynetbox, you can run the install.py script to edit
+netbox and create the needed webhook, users and permissions.
+
+Because this script directly writes to netbox as an admin user, I advise you to check it before
+running it.
+
+```
+python3 -m venv geolookup_webhook_install
+source geolookup_webhook_install/bin/activate
+pip install pynetbox
+./install.py --netbox-url http://localhost:8080 --netbox-token xxxx
+```
+
+# Note about the webhook token's user:
 
 You will generally want this to be a role account because the token will be
 making changes to netbox, like updating lattitude and longitude. When this
 happens, netbox will fire another webhook because the site was updated. We
 need to ignore these updates or there is a possibility of a loop.
 
+There has been talk about making a better method to avoid loops in netbox, but
+currently I don't think there is a way to avoid the second webhook call right
+now.
+
 Setting the WEBHOOK_USER allows us to watch for updates from that user and
-ignore them.
+ignore them. You can either set this as an environment variable in
+geolookup.env, or let the script figure it out by querying netbox.

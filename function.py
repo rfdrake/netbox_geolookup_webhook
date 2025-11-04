@@ -32,19 +32,24 @@ lock = threading.Lock()
 last_request_time = 0
 
 # Changed this to use X-Hook-Signature from netbox
-WEBHOOK_AUTH_KEY = os.environ["WEBHOOK_TOKEN"].encode('utf-8')
+WEBHOOK_AUTH_KEY = os.environ["WEBHOOK_SECRET"].encode('utf-8')
+NETBOX_TOKEN = os.environ.get('NETBOX_TOKEN')
 
-# this is the user that the NETBOX_TOKEN was created as.  Which means we want
-# to ignore any webhooks that were fired by that user because they might be
-# because of an update from a webhook.  This is to prevent loops when we run
-# site.save()
-WEBHOOK_USER = os.environ["WEBHOOK_USER"]
 
 nb = pynetbox.api(url=os.environ['NETBOX_URL'], token=os.environ['NETBOX_TOKEN'])
 if os.environ.get('NETBOX_DISABLE_SSL_WARNINGS', False):
     import urllib3
     nb.http_session.verify = False
     urllib3.disable_warnings()
+
+# this is the user that the NETBOX_TOKEN was created as.  Which means we want
+# to ignore any webhooks that were fired by that user because they might be
+# because of an update from a webhook.  This is to prevent loops when we run
+# site.save()
+
+# fallback to asking the server for this. The query may fail if the user
+# doesn't have permissions to access the Users table.
+WEBHOOK_USER = os.environ.get('WEBHOOK_USER', nb.users.tokens.get(key=NETBOX_TOKEN).user)
 
 # This is a really stupid way to go about this, and requires that we run
 # "gunicorn -w 1" in order to only have 1 worker.  But considering the amount
